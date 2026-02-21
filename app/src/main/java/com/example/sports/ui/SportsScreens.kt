@@ -16,7 +16,9 @@
 
 package com.example.sports.ui
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +32,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -56,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -222,6 +227,34 @@ private fun SportsListItem(
 }
 
 @Composable
+private  fun SportsListAndDetails(
+    modifier: Modifier = Modifier,
+    sports: List<Sport>,
+    onClick: (Sport) -> Unit,
+    selectedSport: Sport
+){
+    val activity = LocalActivity.current
+    Row(modifier = modifier
+    ) {
+        SportsList(
+            sports = sports,
+            onClick = onClick,
+            modifier = Modifier.weight(2f)
+        )
+        Spacer(
+            modifier = Modifier
+                .width(10.dp)
+        )
+        SportsDetail(
+            selectedSport = selectedSport,
+            onBackPressed = {activity?.finish()},
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.weight(3f),
+        )
+    }
+}
+
+@Composable
 private fun SportsListImageItem(sport: Sport, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
@@ -363,5 +396,18 @@ fun SportsListPreview() {
                 onClick = {},
             )
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 1000)
+@Composable
+fun SportsListAndDetailsPreview(){
+    SportsTheme {
+        SportsListAndDetails(
+            sports = LocalSportsDataProvider.getSportsData(),
+            onClick = {},
+            selectedSport = LocalSportsDataProvider.defaultSport,
+
+        )
     }
 }
