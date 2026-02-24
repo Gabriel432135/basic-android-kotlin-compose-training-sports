@@ -51,6 +51,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,12 +72,14 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sports.R
 import com.example.sports.data.LocalSportsDataProvider
 import com.example.sports.model.Sport
 import com.example.sports.ui.theme.SportsTheme
+import com.example.sports.utils.SportsContentType
 
 /**
  * Main composable that serves as container
@@ -81,6 +87,7 @@ import com.example.sports.ui.theme.SportsTheme
  */
 @Composable
 fun SportsApp(
+    windowSize: WindowSizeClass
 ) {
     val viewModel: SportsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
@@ -93,31 +100,41 @@ fun SportsApp(
             )
         }
     ) { innerPadding ->
-        if (uiState.isShowingListPage) {
-            SportsList(
+        if (contentType(windowSize) == SportsContentType.ListOnly) {
+            if (uiState.isShowingListPage) {
+                SportsList(
+                    sports = uiState.sportsList,
+                    onClick = {
+                        viewModel.updateCurrentSport(it)
+                        viewModel.navigateToDetailPage()
+                    },
+                    contentPadding = innerPadding,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = dimensionResource(R.dimen.padding_medium),
+                            start = dimensionResource(R.dimen.padding_medium),
+                            end = dimensionResource(R.dimen.padding_medium),
+                        )
+                )
+            } else {
+                SportsDetail(
+                    selectedSport = uiState.currentSport,
+                    contentPadding = innerPadding,
+                    onBackPressed = {
+                        viewModel.navigateToListPage()
+                    }
+                )
+            }
+        }else if (contentType(windowSize) == SportsContentType.ListAndDetail){
+            SportsListAndDetails(
                 sports = uiState.sportsList,
-                onClick = {
-                    viewModel.updateCurrentSport(it)
-                    viewModel.navigateToDetailPage()
-                },
-                contentPadding = innerPadding,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        top = dimensionResource(R.dimen.padding_medium),
-                        start = dimensionResource(R.dimen.padding_medium),
-                        end = dimensionResource(R.dimen.padding_medium),
-                    )
-            )
-        } else {
-            SportsDetail(
+                onClick = {},
                 selectedSport = uiState.currentSport,
-                contentPadding = innerPadding,
-                onBackPressed = {
-                    viewModel.navigateToListPage()
-                }
+                contentPadding = innerPadding
             )
         }
+
     }
 }
 
@@ -231,7 +248,8 @@ private  fun SportsListAndDetails(
     modifier: Modifier = Modifier,
     sports: List<Sport>,
     onClick: (Sport) -> Unit,
-    selectedSport: Sport
+    selectedSport: Sport,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ){
     val activity = LocalActivity.current
     Row(modifier = modifier
@@ -239,7 +257,8 @@ private  fun SportsListAndDetails(
         SportsList(
             sports = sports,
             onClick = onClick,
-            modifier = Modifier.weight(2f)
+            modifier = Modifier.weight(2f),
+            contentPadding = contentPadding
         )
         Spacer(
             modifier = Modifier
@@ -248,7 +267,7 @@ private  fun SportsListAndDetails(
         SportsDetail(
             selectedSport = selectedSport,
             onBackPressed = {activity?.finish()},
-            contentPadding = PaddingValues(0.dp),
+            contentPadding = contentPadding,
             modifier = Modifier.weight(3f),
         )
     }
@@ -375,39 +394,30 @@ private fun SportsDetail(
     }
 }
 
-@Preview
-@Composable
-fun SportsListItemPreview() {
-    SportsTheme {
-        SportsListItem(
-            sport = LocalSportsDataProvider.defaultSport,
-            onItemClick = {}
-        )
-    }
-}
 
-@Preview
-@Composable
-fun SportsListPreview() {
-    SportsTheme {
-        Surface {
-            SportsList(
-                sports = LocalSportsDataProvider.getSportsData(),
-                onClick = {},
-            )
-        }
-    }
-}
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Preview(showBackground = true, widthDp = 1000)
 @Composable
-fun SportsListAndDetailsPreview(){
+fun SportsAppExpandedPreview(){
     SportsTheme {
-        SportsListAndDetails(
-            sports = LocalSportsDataProvider.getSportsData(),
-            onClick = {},
-            selectedSport = LocalSportsDataProvider.defaultSport,
+       SportsApp(windowSize = WindowSizeClass.calculateFromSize(DpSize(1000.dp, 1000.dp)))
+    }
+}
 
-        )
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun SportsMediumAppPreview(){
+    SportsTheme {
+        SportsApp(windowSize = WindowSizeClass.calculateFromSize(DpSize(400.dp, 1000.dp)))
+    }
+}
+
+fun contentType(windowSize: WindowSizeClass): SportsContentType {
+    return when(windowSize.widthSizeClass){
+        WindowWidthSizeClass.Compact -> SportsContentType.ListOnly
+        WindowWidthSizeClass.Medium -> SportsContentType.ListOnly
+        else -> SportsContentType.ListAndDetail
     }
 }
